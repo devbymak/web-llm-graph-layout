@@ -55,7 +55,7 @@ const Editor = ({
       {/* Sample Selector Section */}
       <div className="p-3 border-b border-slate-700 bg-slate-900">
         <label htmlFor="sample-selector" className="block text-xs font-semibold text-slate-400 mb-2">
-          Load Sample
+          Example Graphs
         </label>
         <select
           id="sample-selector"
