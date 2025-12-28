@@ -65,10 +65,16 @@ const getDefaultSample = () => {
   return SAMPLES.find(s => s.id === DEFAULT_SAMPLE_ID) || SAMPLES[0]
 }
 
+type SampleHistory = {
+  history: HistoryItem[]
+  currentIndex: number
+}
+
 const App = () => {
   const defaultSample = getDefaultSample()
   const [selectedSampleId, setSelectedSampleId] = useState<string>(defaultSample.id)
   const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(defaultSample.data, null, 2))
+  const [historyBySample, setHistoryBySample] = useState<Record<string, SampleHistory>>({})
   const [outputHistory, setOutputHistory] = useState<HistoryItem[]>([])
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
   const [nodes, setNodes] = useState<Node[]>(createInitialNodes(defaultSample.data))
@@ -105,15 +111,44 @@ const App = () => {
     const sample = SAMPLES.find(s => s.id === sampleId)
     if (!sample) return
     
+    // Save current sample's history before switching
+    if (outputHistory.length > 0) {
+      setHistoryBySample(prev => ({
+        ...prev,
+        [selectedSampleId]: {
+          history: outputHistory,
+          currentIndex: currentHistoryIndex,
+        }
+      }))
+    }
+    
     await resetEngine()
     setSelectedSampleId(sampleId)
     setJsonInput(JSON.stringify(sample.data, null, 2))
     setCustomTemplate(sample.template)
-    setNodes([])
-    setEdges([])
-    setOutputHistory([])
-    setCurrentHistoryIndex(-1)
     setError(null)
+    
+    // Load history for the new sample
+    const savedHistory = historyBySample[sampleId]
+    if (savedHistory && savedHistory.history.length > 0) {
+      setOutputHistory(savedHistory.history)
+      setCurrentHistoryIndex(savedHistory.currentIndex)
+      
+      // Restore the last viewed layout
+      const historyItem = savedHistory.history[savedHistory.currentIndex]
+      if (historyItem) {
+        setNodes(createInitialNodes(historyItem.layoutedData))
+        setEdges(createEdges(historyItem.layoutedData))
+      } else {
+        setNodes([])
+        setEdges([])
+      }
+    } else {
+      setOutputHistory([])
+      setCurrentHistoryIndex(-1)
+      setNodes([])
+      setEdges([])
+    }
   }
 
   const handleProgress: ProgressCallback = (report) => {
@@ -161,12 +196,21 @@ const App = () => {
       const historyItem = outputHistory[newIndex]
       setCurrentHistoryIndex(newIndex)
       
+      // Persist index to sample history
+      setHistoryBySample(prev => ({
+        ...prev,
+        [selectedSampleId]: {
+          history: outputHistory,
+          currentIndex: newIndex,
+        }
+      }))
+      
       const newNodes = createInitialNodes(historyItem.layoutedData)
       const newEdges = createEdges(historyItem.layoutedData)
       setNodes(newNodes)
       setEdges(newEdges)
     }
-  }, [currentHistoryIndex, outputHistory])
+  }, [currentHistoryIndex, outputHistory, selectedSampleId])
 
   const handleNextOutput = useCallback(() => {
     if (currentHistoryIndex < outputHistory.length - 1) {
@@ -174,12 +218,21 @@ const App = () => {
       const historyItem = outputHistory[newIndex]
       setCurrentHistoryIndex(newIndex)
       
+      // Persist index to sample history
+      setHistoryBySample(prev => ({
+        ...prev,
+        [selectedSampleId]: {
+          history: outputHistory,
+          currentIndex: newIndex,
+        }
+      }))
+      
       const newNodes = createInitialNodes(historyItem.layoutedData)
       const newEdges = createEdges(historyItem.layoutedData)
       setNodes(newNodes)
       setEdges(newEdges)
     }
-  }, [currentHistoryIndex, outputHistory])
+  }, [currentHistoryIndex, outputHistory, selectedSampleId])
 
   const handleGenerateLayout = async () => {
     setIsGenerating(true)
@@ -224,7 +277,18 @@ const App = () => {
 
       setOutputHistory(prev => {
         const newHistory = [...prev, historyItem]
-        setCurrentHistoryIndex(newHistory.length - 1)
+        const newIndex = newHistory.length - 1
+        setCurrentHistoryIndex(newIndex)
+        
+        // Also persist to sample history
+        setHistoryBySample(prevBySample => ({
+          ...prevBySample,
+          [selectedSampleId]: {
+            history: newHistory,
+            currentIndex: newIndex,
+          }
+        }))
+        
         return newHistory
       })
       setNodes(newNodes)
