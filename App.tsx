@@ -249,7 +249,7 @@ const App = () => {
               <Cpu className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-100 tracking-tight">Local AI Graph Engine</h1>
+              <h1 className="text-xl font-bold text-slate-100 tracking-tight">Web LLM Graph Layout Generator</h1>
               <p className="text-xs text-slate-400">
                 In-Browser Layout (Qwen 2.5 Coder)
                 {modelReady && (

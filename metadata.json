@@ -1,4 +1,4 @@
 {
-  "name": "Gemini Graph Layout Engine",
-  "description": "A powerful diagramming tool that uses Gemini 2.5 Flash to intelligently calculate optimal node positions for React Flow diagrams based on JSON data structures."
+  "name": "Web LLM Graph Layout Generator",
+  "description": "A powerful diagramming tool that uses WebLLM to intelligently calculate optimal node positions for React Flow diagrams based on JSON data structures."
 }
