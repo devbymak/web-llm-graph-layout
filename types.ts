@@ -10,7 +10,7 @@ export interface GraphNode {
   position?: { x: number; y: number };
 }
 
-export interface GraphLink {
+export interface GraphEdge {
   source: string;
   target: string;
   type: string;
@@ -18,7 +18,7 @@ export interface GraphLink {
 
 export interface GraphData {
   nodes: GraphNode[];
-  links: GraphLink[];
+  edges: GraphEdge[];
 }
 
 export interface ReactFlowNode {
@@ -49,4 +49,12 @@ export interface HistoryItem {
   input: string;
   output: string;
   layoutedData: GraphData;
+}
+
+export interface Sample {
+  id: string;
+  name: string;
+  description: string;
+  data: GraphData;
+  template: string;
 }

@@ -3,18 +3,34 @@ import { GraphData } from "../types"
 
 const MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
 
-const SYSTEM_PROMPT = `Act as a React-Flow layout specialist. I will provide a JSON of nodes and links. Your task: Assign each node an {x, y} position on a 100px grid.
+const BASE_SYSTEM_PROMPT = `You are a graph layout engine. Given nodes and edges in JSON, assign pixel coordinates to each node.
 
-Rules:
-1. Start Variables (type: "literalVar" or "byRefVar") at x=0.
-2. Put Objects (type: "obj") they reference at x=300.
-3. Put Properties (type: "literalProp" or "byRefProp") of those objects at x=600.
-4. If a property references another object, move that object to x=900.
-5. Increase 'y' by 150 for each distinct group to prevent line intersections.
-6. Ensure no two nodes have the same {x, y}.
-7. Analyze the links to understand relationships between nodes.
+COORDINATE SYSTEM:
+- x and y are pixel values: 0, 200, 400, 600, 800, etc.
+- Minimum spacing between any two nodes: 200 pixels horizontally, 150 pixels vertically
 
-Return ONLY valid JSON - the same structure as input but with "position": { "x": number, "y": number } added to each node. No markdown, no explanations.`
+RULES:
+- Analyze the edges to understand node relationships
+- Position nodes so the graph is easy to read with minimal edge crossings
+- NO two nodes can overlap - every node must be at least 200px apart horizontally or 150px apart vertically
+- Related nodes (connected by edges) should be positioned near each other
+- Use the full coordinate range needed to avoid overlaps
+
+EXAMPLE COORDINATE SCALE:
+Node positions should look like: {"x": 0, "y": 0}, {"x": 200, "y": 150}, {"x": 400, "y": 0}, {"x": 600, "y": 300}
+
+OUTPUT: Return ONLY valid JSON with the same structure as input, but with "position": {"x": number, "y": number} added to each node. No markdown, no explanation.`
+
+const buildSystemPrompt = (customTemplate?: string): string => {
+  if (!customTemplate || customTemplate.trim() === '') {
+    return BASE_SYSTEM_PROMPT
+  }
+  
+  return `${BASE_SYSTEM_PROMPT}
+
+Additional Custom Rules:
+${customTemplate.trim()}`
+}
 
 let engineInstance: MLCEngine | null = null
 let isLoading = false
@@ -80,16 +96,18 @@ export const isEngineReady = (): boolean => {
 
 export const generateLayout = async (
   graphData: GraphData,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  customTemplate?: string
 ): Promise<GraphData> => {
   const engine = await initializeEngine(onProgress)
 
   const userMessage = JSON.stringify(graphData, null, 2)
+  const systemPrompt = buildSystemPrompt(customTemplate)
 
   try {
     const response = await engine.chat.completions.create({
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
       ],
       temperature: 0.1,

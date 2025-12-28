@@ -11,9 +11,9 @@ import ReactFlow, {
   applyNodeChanges,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { INITIAL_GRAPH_DATA } from './constants'
+import { SAMPLES, DEFAULT_SAMPLE_ID } from './constants'
 import { GraphData, HistoryItem } from './types'
-import { generateLayout, isEngineReady, ProgressCallback } from './services/webllmService'
+import { generateLayout, isEngineReady, ProgressCallback, resetEngine } from './services/webllmService'
 import Editor from './components/Editor'
 import CustomNode from './components/CustomNode'
 import { Layout, GitFork, Cpu, Loader2 } from 'lucide-react'
@@ -42,10 +42,10 @@ const createInitialNodes = (data: GraphData): Node[] => {
 }
 
 const createEdges = (data: GraphData): Edge[] => {
-  return data.links.map((link, i) => ({
+  return data.edges.map((edge, i) => ({
     id: `e-${i}`,
-    source: link.source,
-    target: link.target,
+    source: edge.source,
+    target: edge.target,
     type: 'smoothstep',
     animated: true,
     markerEnd: {
@@ -56,22 +56,29 @@ const createEdges = (data: GraphData): Edge[] => {
   }))
 }
 
+const getDefaultSample = () => {
+  return SAMPLES.find(s => s.id === DEFAULT_SAMPLE_ID) || SAMPLES[0]
+}
+
 const App = () => {
-  const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(INITIAL_GRAPH_DATA, null, 2))
+  const defaultSample = getDefaultSample()
+  const [selectedSampleId, setSelectedSampleId] = useState<string>(defaultSample.id)
+  const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(defaultSample.data, null, 2))
   const [outputHistory, setOutputHistory] = useState<HistoryItem[]>([])
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
-  const [nodes, setNodes] = useState<Node[]>(createInitialNodes(INITIAL_GRAPH_DATA))
-  const [edges, setEdges] = useState<Edge[]>(createEdges(INITIAL_GRAPH_DATA))
+  const [nodes, setNodes] = useState<Node[]>(createInitialNodes(defaultSample.data))
+  const [edges, setEdges] = useState<Edge[]>(createEdges(defaultSample.data))
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingProgress, setLoadingProgress] = useState<{ text: string; progress: number } | null>(null)
   const [modelReady, setModelReady] = useState(isEngineReady())
+  const [customTemplate, setCustomTemplate] = useState<string>(defaultSample.template)
 
   const handleJsonChange = (val: string) => {
     setJsonInput(val)
     try {
       const parsed = JSON.parse(val) as GraphData
-      if (parsed.nodes && parsed.links) {
+      if (parsed.nodes && parsed.edges) {
         setEdges(createEdges(parsed))
         setNodes(prev => {
           const newNodes = createInitialNodes(parsed)
@@ -85,6 +92,21 @@ const App = () => {
     } catch {
       // Ignore JSON parse errors while typing
     }
+  }
+
+  const handleSampleChange = async (sampleId: string) => {
+    const sample = SAMPLES.find(s => s.id === sampleId)
+    if (!sample) return
+    
+    await resetEngine()
+    setSelectedSampleId(sampleId)
+    setJsonInput(JSON.stringify(sample.data, null, 2))
+    setCustomTemplate(sample.template)
+    setNodes([])
+    setEdges([])
+    setOutputHistory([])
+    setCurrentHistoryIndex(-1)
+    setError(null)
   }
 
   const handleProgress: ProgressCallback = (report) => {
@@ -136,7 +158,7 @@ const App = () => {
         throw new Error("Invalid JSON format")
       }
 
-      const layoutedData = await generateLayout(graphData, handleProgress)
+      const layoutedData = await generateLayout(graphData, handleProgress, customTemplate)
       
       setModelReady(true)
       setLoadingProgress(null)
@@ -214,6 +236,11 @@ const App = () => {
             currentIndex={currentHistoryIndex}
             onPrevOutput={handlePrevOutput}
             onNextOutput={handleNextOutput}
+            customTemplate={customTemplate}
+            onCustomTemplateChange={setCustomTemplate}
+            samples={SAMPLES}
+            selectedSampleId={selectedSampleId}
+            onSampleChange={handleSampleChange}
           />
         </div>
 

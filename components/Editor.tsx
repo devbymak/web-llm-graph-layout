@@ -1,5 +1,6 @@
-import { RefreshCw, Play, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { RefreshCw, Play, Copy, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
+import { Sample } from '../types'
 
 interface EditorProps {
   value: string
@@ -12,10 +13,32 @@ interface EditorProps {
   currentIndex: number
   onPrevOutput: () => void
   onNextOutput: () => void
+  customTemplate: string
+  onCustomTemplateChange: (value: string) => void
+  samples: Sample[]
+  selectedSampleId: string
+  onSampleChange: (sampleId: string) => void
 }
 
-const Editor = ({ value, onChange, output, onGenerate, isGenerating, error, historyLength, currentIndex, onPrevOutput, onNextOutput }: EditorProps) => {
+const Editor = ({ 
+  value, 
+  onChange, 
+  output, 
+  onGenerate, 
+  isGenerating, 
+  error, 
+  historyLength, 
+  currentIndex, 
+  onPrevOutput, 
+  onNextOutput, 
+  customTemplate, 
+  onCustomTemplateChange,
+  samples,
+  selectedSampleId,
+  onSampleChange
+}: EditorProps) => {
   const [copied, setCopied] = useState(false)
+  const [isTemplateExpanded, setIsTemplateExpanded] = useState(false)
 
   const handleCopy = () => {
     if (output) {
@@ -25,8 +48,76 @@ const Editor = ({ value, onChange, output, onGenerate, isGenerating, error, hist
     }
   }
 
+  const handleToggleTemplate = () => {
+    setIsTemplateExpanded(!isTemplateExpanded)
+  }
+
+  const selectedSample = samples.find(s => s.id === selectedSampleId)
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border-r border-slate-700">
+      {/* Sample Selector Section */}
+      <div className="p-3 border-b border-slate-700 bg-slate-900">
+        <label htmlFor="sample-selector" className="block text-xs font-semibold text-slate-400 mb-2">
+          Load Sample
+        </label>
+        <select
+          id="sample-selector"
+          value={selectedSampleId}
+          onChange={(e) => onSampleChange(e.target.value)}
+          className="w-full bg-slate-800 text-slate-200 text-sm px-3 py-2 rounded border border-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 cursor-pointer"
+          aria-label="Select a sample to load"
+        >
+          {samples.map((sample) => (
+            <option key={sample.id} value={sample.id}>
+              {sample.name}
+            </option>
+          ))}
+        </select>
+        {selectedSample && selectedSample.description && (
+          <p className="text-xs text-slate-500 mt-1.5">{selectedSample.description}</p>
+        )}
+      </div>
+
+      {/* Custom Template Section */}
+      <div className="border-b border-slate-700 bg-slate-900">
+        <button
+          onClick={handleToggleTemplate}
+          aria-label={isTemplateExpanded ? 'Hide custom template' : 'Show custom template'}
+          aria-expanded={isTemplateExpanded}
+          tabIndex={0}
+          className="w-full p-3 flex items-center justify-between hover:bg-slate-800 transition-colors"
+        >
+          <span className="text-sm font-semibold text-slate-300">
+            Custom Layout Rules (Optional)
+          </span>
+          {isTemplateExpanded ? (
+            <ChevronUp className="w-4 h-4 text-slate-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          )}
+        </button>
+        {isTemplateExpanded && (
+          <div className="p-4 border-t border-slate-700 bg-slate-950">
+            <textarea
+              className="w-full h-32 bg-slate-900 text-slate-300 font-mono text-xs p-3 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/50 rounded border border-slate-700"
+              value={customTemplate}
+              onChange={(e) => onCustomTemplateChange(e.target.value)}
+              placeholder={`Describe how you want nodes arranged, e.g.:
+- Place root nodes at the top
+- Group nodes by type
+- Arrange in a circular layout
+- Keep connected nodes close together`}
+              spellCheck={false}
+              aria-label="Custom layout rules template"
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              Add custom rules to override or extend the default layout behavior. Leave empty to use default generic layout.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Input Section */}
       <div className="flex flex-col flex-1 min-h-0">
         <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
@@ -152,7 +243,7 @@ const Editor = ({ value, onChange, output, onGenerate, isGenerating, error, hist
       </div>
 
       <div className="p-2 bg-slate-800 text-xs text-slate-400 border-t border-slate-700">
-        Tip: Edit the JSON structure above to change nodes and links, then click Generate.
+        Tip: Edit the JSON structure above to change nodes and edges, then click Generate.
       </div>
     </div>
   )
