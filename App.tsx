@@ -56,6 +56,7 @@ const createEdges = (data: GraphData): Edge[] => {
 
 const App = () => {
   const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(INITIAL_GRAPH_DATA, null, 2))
+  const [jsonOutput, setJsonOutput] = useState<string>('')
   const [nodes, setNodes] = useState<Node[]>(createInitialNodes(INITIAL_GRAPH_DATA))
   const [edges, setEdges] = useState<Edge[]>(createEdges(INITIAL_GRAPH_DATA))
   const [isGenerating, setIsGenerating] = useState(false)
@@ -123,7 +124,7 @@ const App = () => {
 
       setNodes(newNodes)
       setEdges(newEdges)
-      setJsonInput(JSON.stringify(layoutedData, null, 2))
+      setJsonOutput(JSON.stringify(layoutedData, null, 2))
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
       setError(errorMessage)
@@ -160,6 +161,7 @@ const App = () => {
           <Editor 
             value={jsonInput} 
             onChange={handleJsonChange} 
+            output={jsonOutput}
             onGenerate={handleGenerateLayout}
             isGenerating={isGenerating}
             error={error}
