@@ -13,7 +13,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { SAMPLES, DEFAULT_SAMPLE_ID } from './constants'
 import { GraphData, HistoryItem } from './types'
-import { generateLayout, isEngineReady, ProgressCallback, resetEngine, initializeEngine } from './services/webllmService'
+import { generateLayout, isEngineReady, ProgressCallback, resetEngine, initializeEngine, StatusCallback } from './services/webllmService'
 import Editor from './components/Editor'
 import CustomNode from './components/CustomNode'
 import { Layout, GitFork, Cpu, Loader2, Play, RefreshCw } from 'lucide-react'
@@ -74,6 +74,7 @@ const App = () => {
   const [modelReady, setModelReady] = useState(isEngineReady())
   const [isModelLoading, setIsModelLoading] = useState(!isEngineReady())
   const [customTemplate, setCustomTemplate] = useState<string>(defaultSample.template)
+  const [aiStatus, setAiStatus] = useState<string>('')
 
   const handleJsonChange = (val: string) => {
     setJsonInput(val)
@@ -115,6 +116,10 @@ const App = () => {
       text: report.text,
       progress: report.progress,
     })
+  }
+
+  const handleStatus: StatusCallback = (status: string) => {
+    setAiStatus(status)
   }
 
   const handleInitializeModel = async () => {
@@ -174,6 +179,7 @@ const App = () => {
   const handleGenerateLayout = async () => {
     setIsGenerating(true)
     setError(null)
+    setAiStatus('')
 
     try {
       let graphData: GraphData
@@ -183,10 +189,11 @@ const App = () => {
         throw new Error("Invalid JSON format")
       }
 
-      const layoutedData = await generateLayout(graphData, handleProgress, customTemplate)
+      const layoutedData = await generateLayout(graphData, handleProgress, customTemplate, handleStatus)
       
       setModelReady(true)
       setLoadingProgress(null)
+      setAiStatus('')
 
       const newNodes = layoutedData.nodes.map((node) => ({
         id: node.id,
@@ -221,6 +228,7 @@ const App = () => {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
       setError(errorMessage)
       setLoadingProgress(null)
+      setAiStatus('')
     } finally {
       setIsGenerating(false)
     }
@@ -328,6 +336,11 @@ const App = () => {
                         {Math.round(loadingProgress.progress * 100)}%
                       </p>
                     </div>
+                  )}
+                  {aiStatus && (
+                    <p className="text-sm text-emerald-400/70 mt-4 transition-opacity duration-300">
+                      {aiStatus}
+                    </p>
                   )}
                 </div>
               </div>

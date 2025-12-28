@@ -36,6 +36,7 @@ let engineInstance: MLCEngine | null = null
 let isLoading = false
 
 export type ProgressCallback = (progress: InitProgressReport) => void
+export type StatusCallback = (status: string) => void
 
 const getLocalModelUrl = () => {
   const base = `${window.location.origin}/webllm-models/${MODEL_ID}/resolve/main/`
@@ -97,7 +98,8 @@ export const isEngineReady = (): boolean => {
 export const generateLayout = async (
   graphData: GraphData,
   onProgress?: ProgressCallback,
-  customTemplate?: string
+  customTemplate?: string,
+  onStatus?: StatusCallback
 ): Promise<GraphData> => {
   const engine = await initializeEngine(onProgress)
 
@@ -105,6 +107,16 @@ export const generateLayout = async (
   const systemPrompt = buildSystemPrompt(customTemplate)
 
   try {
+    onStatus?.("Reading graph structure...")
+    
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    onStatus?.("Analyzing node relationships...")
+    
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    onStatus?.("Generating layout coordinates...")
+
     const response = await engine.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
@@ -114,11 +126,15 @@ export const generateLayout = async (
       max_tokens: 4096,
     })
 
+    onStatus?.("Processing AI response...")
+
     const content = response.choices[0]?.message?.content
 
     if (!content) {
       throw new Error("No response from WebLLM")
     }
+
+    onStatus?.("Parsing layout data...")
 
     let jsonString = content.trim()
     if (jsonString.startsWith("```json")) {
@@ -133,6 +149,8 @@ export const generateLayout = async (
 
     const layoutedData = JSON.parse(jsonString) as GraphData
 
+    onStatus?.("Validating positions...")
+
     const validatedData: GraphData = {
       ...layoutedData,
       nodes: layoutedData.nodes.map((node, index) => ({
@@ -144,9 +162,12 @@ export const generateLayout = async (
       })),
     }
 
+    onStatus?.("Layout complete!")
+
     return validatedData
   } catch (error) {
     console.error("Layout generation failed:", error)
+    onStatus?.("Error occurred")
     throw error
   }
 }
