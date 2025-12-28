@@ -401,17 +401,6 @@ const App = () => {
                 <Controls className="!bg-slate-800 !border-slate-700 !shadow-xl [&>button]:!border-slate-700 [&>button]:!text-slate-400 [&>button:hover]:!bg-slate-700 [&>button:hover]:!text-white" />
               </ReactFlow>
 
-              {/* Overlay Status/Info */}
-              <div className="absolute top-4 right-4 flex gap-4 pointer-events-none">
-                <div className="bg-slate-900/80 backdrop-blur border border-slate-700 p-3 rounded-lg shadow-xl text-xs text-slate-400">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Layout className="w-4 h-4 text-emerald-400" />
-                    <span className="font-semibold text-slate-200">Auto-Layout Active</span>
-                  </div>
-                  <p>Modify JSON or click Generate to re-calculate.</p>
-                </div>
-              </div>
-
               {/* Floating Generate Button */}
               <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
                 <button
