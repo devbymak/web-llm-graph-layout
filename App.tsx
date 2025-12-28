@@ -16,6 +16,7 @@ import { GraphData, HistoryItem } from './types'
 import { generateLayout, isEngineReady, ProgressCallback, resetEngine, initializeEngine, StatusCallback } from './services/webllmService'
 import Editor from './components/Editor'
 import CustomNode from './components/CustomNode'
+import RoutedEdge from './components/RoutedEdge'
 import { Layout, GitFork, Cpu, Loader2, Play, RefreshCw } from 'lucide-react'
 
 const nodeTypes = {
@@ -25,6 +26,10 @@ const nodeTypes = {
   literalProp: CustomNode,
   byRefProp: CustomNode,
   default: CustomNode,
+}
+
+const edgeTypes = {
+  routed: RoutedEdge,
 }
 
 const createInitialNodes = (data: GraphData): Node[] => {
@@ -46,7 +51,7 @@ const createEdges = (data: GraphData): Edge[] => {
     id: `e-${i}`,
     source: edge.source,
     target: edge.target,
-    type: 'smoothstep',
+    type: 'routed',
     animated: true,
     markerEnd: {
       type: MarkerType.ArrowClosed,
@@ -389,6 +394,7 @@ const App = () => {
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={() => {}}
                 connectionMode={ConnectionMode.Loose}
