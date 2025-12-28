@@ -1,4 +1,4 @@
-import { RefreshCw, Play, Copy, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { Copy, Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import { Sample } from '../types'
 
@@ -6,8 +6,6 @@ interface EditorProps {
   value: string
   onChange: (value: string) => void
   output: string
-  onGenerate: () => void
-  isGenerating: boolean
   error: string | null
   historyLength: number
   currentIndex: number
@@ -24,8 +22,6 @@ const Editor = ({
   value, 
   onChange, 
   output, 
-  onGenerate, 
-  isGenerating, 
   error, 
   historyLength, 
   currentIndex, 
@@ -120,28 +116,10 @@ const Editor = ({
 
       {/* Input Section */}
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
+        <div className="p-4 border-b border-slate-700 bg-slate-900">
           <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
             <span>Data Input (JSON)</span>
           </h2>
-          <button
-            onClick={onGenerate}
-            disabled={isGenerating}
-            aria-label={isGenerating ? 'Generating layout' : 'Generate layout'}
-            tabIndex={0}
-            className={`flex items-center gap-2 px-4 py-2 rounded font-medium transition-all ${
-              isGenerating
-                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/25'
-            }`}
-          >
-            {isGenerating ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4 fill-current" />
-            )}
-            {isGenerating ? 'Generating...' : 'Generate Layout'}
-          </button>
         </div>
         
         <div className="flex-1 relative min-h-0">

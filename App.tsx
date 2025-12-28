@@ -13,10 +13,10 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { SAMPLES, DEFAULT_SAMPLE_ID } from './constants'
 import { GraphData, HistoryItem } from './types'
-import { generateLayout, isEngineReady, ProgressCallback, resetEngine } from './services/webllmService'
+import { generateLayout, isEngineReady, ProgressCallback, resetEngine, initializeEngine } from './services/webllmService'
 import Editor from './components/Editor'
 import CustomNode from './components/CustomNode'
-import { Layout, GitFork, Cpu, Loader2 } from 'lucide-react'
+import { Layout, GitFork, Cpu, Loader2, Play, RefreshCw } from 'lucide-react'
 
 const nodeTypes = {
   literalVar: CustomNode,
@@ -72,6 +72,7 @@ const App = () => {
   const [error, setError] = useState<string | null>(null)
   const [loadingProgress, setLoadingProgress] = useState<{ text: string; progress: number } | null>(null)
   const [modelReady, setModelReady] = useState(isEngineReady())
+  const [isModelLoading, setIsModelLoading] = useState(!isEngineReady())
   const [customTemplate, setCustomTemplate] = useState<string>(defaultSample.template)
 
   const handleJsonChange = (val: string) => {
@@ -114,6 +115,30 @@ const App = () => {
       text: report.text,
       progress: report.progress,
     })
+  }
+
+  const handleInitializeModel = async () => {
+    if (isEngineReady()) {
+      setModelReady(true)
+      setIsModelLoading(false)
+      setLoadingProgress(null)
+      return
+    }
+
+    setIsModelLoading(true)
+    setLoadingProgress(null)
+
+    try {
+      await initializeEngine(handleProgress)
+      setModelReady(true)
+      setLoadingProgress(null)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load model"
+      setError(errorMessage)
+      setLoadingProgress(null)
+    } finally {
+      setIsModelLoading(false)
+    }
   }
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -202,7 +227,7 @@ const App = () => {
   }
 
   useEffect(() => {
-    handleGenerateLayout()
+    handleInitializeModel()
   }, [])
 
   return (
@@ -229,8 +254,6 @@ const App = () => {
             value={jsonInput} 
             onChange={handleJsonChange} 
             output={currentHistoryIndex >= 0 ? outputHistory[currentHistoryIndex]?.output || '' : ''}
-            onGenerate={handleGenerateLayout}
-            isGenerating={isGenerating}
             error={error}
             historyLength={outputHistory.length}
             currentIndex={currentHistoryIndex}
@@ -246,7 +269,7 @@ const App = () => {
 
         {/* Right Panel: React Flow or Loading */}
         <div className="flex-1 h-full relative bg-slate-950">
-          {!modelReady || isGenerating ? (
+          {isModelLoading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex flex-col items-center gap-6 max-w-md px-8">
                 <div className="relative">
@@ -254,7 +277,7 @@ const App = () => {
                 </div>
                 <div className="text-center">
                   <h3 className="text-xl font-semibold text-slate-200 mb-2">
-                    {!modelReady ? 'Loading AI Model...' : 'Generating Layout...'}
+                    Loading AI Model...
                   </h3>
                   {loadingProgress && (
                     <div className="mt-4">
@@ -272,7 +295,7 @@ const App = () => {
                       </p>
                     </div>
                   )}
-                  {!loadingProgress && !modelReady && (
+                  {!loadingProgress && (
                     <p className="text-sm text-slate-500 mt-2">
                       Preparing the model for first use...
                     </p>
@@ -280,6 +303,73 @@ const App = () => {
                 </div>
               </div>
             </div>
+          ) : isGenerating ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-6 max-w-md px-8">
+                <div className="relative">
+                  <Loader2 className="w-16 h-16 text-emerald-400 animate-spin" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-slate-200 mb-2">
+                    Generating Layout...
+                  </h3>
+                  {loadingProgress && (
+                    <div className="mt-4">
+                      <p className="text-sm text-slate-400 mb-3">
+                        {loadingProgress.text}
+                      </p>
+                      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 ease-out"
+                          style={{ width: `${loadingProgress.progress * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-emerald-400 font-mono mt-2">
+                        {Math.round(loadingProgress.progress * 100)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : outputHistory.length === 0 || currentHistoryIndex < 0 ? (
+            <>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-6 max-w-md px-8">
+                  <div className="text-slate-600 text-lg font-medium flex flex-col items-center">
+                    <GitFork className="w-16 h-16 mb-4 opacity-50" />
+                    <h3 className="text-xl font-semibold text-slate-200 mb-2">
+                      No Layout Generated Yet
+                    </h3>
+                    <p className="text-sm text-slate-400 text-center">
+                      Enter your graph data in JSON format and click "Generate Layout" to create a visual diagram.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Generate Button */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
+                <button
+                  onClick={handleGenerateLayout}
+                  disabled={isGenerating || !modelReady}
+                  aria-label={isGenerating ? 'Generating layout' : !modelReady ? 'Model loading' : 'Generate layout'}
+                  tabIndex={0}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all shadow-2xl ${
+                    isGenerating || !modelReady
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-500/50'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Play className="w-5 h-5 fill-current" />
+                  )}
+                  {isGenerating ? 'Generating...' : 'Generate Layout'}
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <ReactFlow
@@ -308,15 +398,28 @@ const App = () => {
                   <p>Modify JSON or click Generate to re-calculate.</p>
                 </div>
               </div>
-              
-              {nodes.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-slate-600 text-lg font-medium flex flex-col items-center">
-                    <GitFork className="w-12 h-12 mb-4 opacity-50" />
-                    <span>No nodes to display</span>
-                  </div>
-                </div>
-              )}
+
+              {/* Floating Generate Button */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 pointer-events-auto">
+                <button
+                  onClick={handleGenerateLayout}
+                  disabled={isGenerating || !modelReady}
+                  aria-label={isGenerating ? 'Generating layout' : !modelReady ? 'Model loading' : 'Generate layout'}
+                  tabIndex={0}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all shadow-2xl ${
+                    isGenerating || !modelReady
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-500/50'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Play className="w-5 h-5 fill-current" />
+                  )}
+                  {isGenerating ? 'Generating...' : 'Generate Layout'}
+                </button>
+              </div>
             </>
           )}
         </div>
