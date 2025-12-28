@@ -1,4 +1,4 @@
-import { RefreshCw, Play, Copy, Check } from 'lucide-react'
+import { RefreshCw, Play, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 interface EditorProps {
@@ -8,9 +8,13 @@ interface EditorProps {
   onGenerate: () => void
   isGenerating: boolean
   error: string | null
+  historyLength: number
+  currentIndex: number
+  onPrevOutput: () => void
+  onNextOutput: () => void
 }
 
-const Editor = ({ value, onChange, output, onGenerate, isGenerating, error }: EditorProps) => {
+const Editor = ({ value, onChange, output, onGenerate, isGenerating, error, historyLength, currentIndex, onPrevOutput, onNextOutput }: EditorProps) => {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
@@ -74,26 +78,61 @@ const Editor = ({ value, onChange, output, onGenerate, isGenerating, error }: Ed
           <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
             <span>Generated Output (JSON)</span>
           </h2>
-          {output && (
-            <button
-              onClick={handleCopy}
-              aria-label="Copy output to clipboard"
-              tabIndex={0}
-              className="flex items-center gap-2 px-3 py-1.5 rounded font-medium transition-all bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {historyLength > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onPrevOutput}
+                  disabled={currentIndex <= 0}
+                  aria-label="Previous output"
+                  tabIndex={0}
+                  className={`flex items-center justify-center w-8 h-8 rounded font-medium transition-all ${
+                    currentIndex <= 0
+                      ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm text-slate-400 font-mono min-w-[60px] text-center">
+                  {currentIndex + 1} of {historyLength}
+                </span>
+                <button
+                  onClick={onNextOutput}
+                  disabled={currentIndex >= historyLength - 1}
+                  aria-label="Next output"
+                  tabIndex={0}
+                  className={`flex items-center justify-center w-8 h-8 rounded font-medium transition-all ${
+                    currentIndex >= historyLength - 1
+                      ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {output && (
+              <button
+                onClick={handleCopy}
+                aria-label="Copy output to clipboard"
+                tabIndex={0}
+                className="flex items-center gap-2 px-3 py-1.5 rounded font-medium transition-all bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
         
         <div className="flex-1 relative min-h-0">

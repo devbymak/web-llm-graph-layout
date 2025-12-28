@@ -12,7 +12,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { INITIAL_GRAPH_DATA } from './constants'
-import { GraphData } from './types'
+import { GraphData, HistoryItem } from './types'
 import { generateLayout, isEngineReady, ProgressCallback } from './services/webllmService'
 import Editor from './components/Editor'
 import CustomNode from './components/CustomNode'
@@ -58,7 +58,8 @@ const createEdges = (data: GraphData): Edge[] => {
 
 const App = () => {
   const [jsonInput, setJsonInput] = useState<string>(JSON.stringify(INITIAL_GRAPH_DATA, null, 2))
-  const [jsonOutput, setJsonOutput] = useState<string>('')
+  const [outputHistory, setOutputHistory] = useState<HistoryItem[]>([])
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
   const [nodes, setNodes] = useState<Node[]>(createInitialNodes(INITIAL_GRAPH_DATA))
   const [edges, setEdges] = useState<Edge[]>(createEdges(INITIAL_GRAPH_DATA))
   const [isGenerating, setIsGenerating] = useState(false)
@@ -97,6 +98,32 @@ const App = () => {
     setNodes((nds) => applyNodeChanges(changes, nds))
   }, [])
 
+  const handlePrevOutput = useCallback(() => {
+    if (currentHistoryIndex > 0) {
+      const newIndex = currentHistoryIndex - 1
+      const historyItem = outputHistory[newIndex]
+      setCurrentHistoryIndex(newIndex)
+      
+      const newNodes = createInitialNodes(historyItem.layoutedData)
+      const newEdges = createEdges(historyItem.layoutedData)
+      setNodes(newNodes)
+      setEdges(newEdges)
+    }
+  }, [currentHistoryIndex, outputHistory])
+
+  const handleNextOutput = useCallback(() => {
+    if (currentHistoryIndex < outputHistory.length - 1) {
+      const newIndex = currentHistoryIndex + 1
+      const historyItem = outputHistory[newIndex]
+      setCurrentHistoryIndex(newIndex)
+      
+      const newNodes = createInitialNodes(historyItem.layoutedData)
+      const newEdges = createEdges(historyItem.layoutedData)
+      setNodes(newNodes)
+      setEdges(newEdges)
+    }
+  }, [currentHistoryIndex, outputHistory])
+
   const handleGenerateLayout = async () => {
     setIsGenerating(true)
     setError(null)
@@ -128,9 +155,21 @@ const App = () => {
 
       const newEdges = createEdges(layoutedData)
 
+      const historyItem: HistoryItem = {
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        input: jsonInput,
+        output: JSON.stringify(layoutedData, null, 2),
+        layoutedData,
+      }
+
+      setOutputHistory(prev => {
+        const newHistory = [...prev, historyItem]
+        setCurrentHistoryIndex(newHistory.length - 1)
+        return newHistory
+      })
       setNodes(newNodes)
       setEdges(newEdges)
-      setJsonOutput(JSON.stringify(layoutedData, null, 2))
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
       setError(errorMessage)
@@ -167,10 +206,14 @@ const App = () => {
           <Editor 
             value={jsonInput} 
             onChange={handleJsonChange} 
-            output={jsonOutput}
+            output={currentHistoryIndex >= 0 ? outputHistory[currentHistoryIndex]?.output || '' : ''}
             onGenerate={handleGenerateLayout}
             isGenerating={isGenerating}
             error={error}
+            historyLength={outputHistory.length}
+            currentIndex={currentHistoryIndex}
+            onPrevOutput={handlePrevOutput}
+            onNextOutput={handleNextOutput}
           />
         </div>
 

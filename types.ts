@@ -42,3 +42,11 @@ export interface ReactFlowEdge {
   type?: string;
   style?: React.CSSProperties;
 }
+
+export interface HistoryItem {
+  id: string;
+  timestamp: Date;
+  input: string;
+  output: string;
+  layoutedData: GraphData;
+}
