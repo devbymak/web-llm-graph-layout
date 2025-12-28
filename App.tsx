@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ReactFlow, {
   Background,
   Controls,
@@ -7,6 +7,8 @@ import ReactFlow, {
   MarkerType,
   ConnectionMode,
   ReactFlowProvider,
+  NodeChange,
+  applyNodeChanges,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { INITIAL_GRAPH_DATA } from './constants'
@@ -90,6 +92,10 @@ const App = () => {
       progress: report.progress,
     })
   }
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes((nds) => applyNodeChanges(changes, nds))
+  }, [])
 
   const handleGenerateLayout = async () => {
     setIsGenerating(true)
@@ -210,12 +216,13 @@ const App = () => {
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
-                onNodesChange={() => {}}
+                onNodesChange={onNodesChange}
                 onEdgesChange={() => {}}
                 connectionMode={ConnectionMode.Loose}
                 fitView
                 className="bg-slate-950"
                 proOptions={{ hideAttribution: true }}
+                nodesDraggable={true}
               >
                 <Background color="#334155" gap={20} size={1} />
                 <Controls className="!bg-slate-800 !border-slate-700 !shadow-xl [&>button]:!border-slate-700 [&>button]:!text-slate-400 [&>button:hover]:!bg-slate-700 [&>button:hover]:!text-white" />
