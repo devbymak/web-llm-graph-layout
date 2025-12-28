@@ -1,23 +1,81 @@
 import { CreateMLCEngine, MLCEngine, InitProgressReport, prebuiltAppConfig } from "@mlc-ai/web-llm"
-import { GraphData } from "../types"
+import { GraphData, GraphNode } from "../types"
+
+const MIN_DISTANCE = 200
+const NUDGE_STEP = 50
+const MAX_ITERATIONS = 100
+
+const getDistance = (a: { x: number, y: number }, b: { x: number, y: number }): number => {
+  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2))
+}
+
+const resolveOverlaps = (nodes: GraphNode[]): GraphNode[] => {
+  const result = nodes.map(node => ({
+    ...node,
+    position: node.position ? { ...node.position } : { x: 0, y: 0 }
+  }))
+
+  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+    let hasOverlap = false
+
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const posA = result[i].position!
+        const posB = result[j].position!
+        const distance = getDistance(posA, posB)
+
+        if (distance < MIN_DISTANCE) {
+          hasOverlap = true
+          
+          const dx = posB.x - posA.x
+          const dy = posB.y - posA.y
+          const len = distance || 1
+          
+          const nudgeX = (dx / len) * NUDGE_STEP
+          const nudgeY = (dy / len) * NUDGE_STEP
+
+          if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+            result[j].position!.x += NUDGE_STEP
+            result[j].position!.y += NUDGE_STEP
+          } else {
+            result[j].position!.x += nudgeX
+            result[j].position!.y += nudgeY
+          }
+        }
+      }
+    }
+
+    if (!hasOverlap) break
+  }
+
+  return result
+}
 
 const MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
 
 const BASE_SYSTEM_PROMPT = `You are a graph layout engine. Given nodes and edges in JSON, assign pixel coordinates to each node.
 
 COORDINATE SYSTEM:
-- x and y are pixel values: 0, 200, 400, 600, 800, etc.
-- Minimum spacing between any two nodes: 200 pixels horizontally, 150 pixels vertically
+- x and y are pixel values
+- Each node position must be at least 250 pixels away from every other node (measure from center to center)
+- Distribute nodes across a wide area: use coordinates ranging from 0 to 800+ for x and 0 to 600+ for y depending on node count
 
-RULES:
+CRITICAL ANTI-OVERLAP RULES:
+- Every node MUST have a unique position
+- NO two nodes can have similar x AND y coordinates
+- If nodes would be close together, spread them out more
+- Before outputting, verify that NO two nodes share similar coordinates
+
+LAYOUT RULES:
 - Analyze the edges to understand node relationships
 - Position nodes so the graph is easy to read with minimal edge crossings
-- NO two nodes can overlap - every node must be at least 200px apart horizontally or 150px apart vertically
-- Related nodes (connected by edges) should be positioned near each other
-- Use the full coordinate range needed to avoid overlaps
+- Related nodes (connected by edges) should be positioned near each other but NOT overlapping
 
-EXAMPLE COORDINATE SCALE:
-Node positions should look like: {"x": 0, "y": 0}, {"x": 200, "y": 150}, {"x": 400, "y": 0}, {"x": 600, "y": 300}
+EXAMPLE - 4 nodes properly spaced:
+{"x": 0, "y": 0}, {"x": 300, "y": 0}, {"x": 0, "y": 250}, {"x": 300, "y": 250}
+
+EXAMPLE - 5 nodes properly spaced:
+{"x": 400, "y": 0}, {"x": 0, "y": 200}, {"x": 800, "y": 200}, {"x": 200, "y": 450}, {"x": 600, "y": 450}
 
 OUTPUT: Return ONLY valid JSON with the same structure as input, but with "position": {"x": number, "y": number} added to each node. No markdown, no explanation.`
 
@@ -151,15 +209,21 @@ export const generateLayout = async (
 
     onStatus?.("Validating positions...")
 
+    const nodesWithPositions = layoutedData.nodes.map((node, index) => ({
+      ...node,
+      position: node.position || {
+        x: (index % 4) * 300,
+        y: Math.floor(index / 4) * 200,
+      },
+    }))
+
+    onStatus?.("Resolving overlaps...")
+
+    const resolvedNodes = resolveOverlaps(nodesWithPositions)
+
     const validatedData: GraphData = {
       ...layoutedData,
-      nodes: layoutedData.nodes.map((node, index) => ({
-        ...node,
-        position: node.position || {
-          x: (index % 4) * 300,
-          y: Math.floor(index / 4) * 150,
-        },
-      })),
+      nodes: resolvedNodes,
     }
 
     onStatus?.("Layout complete!")
