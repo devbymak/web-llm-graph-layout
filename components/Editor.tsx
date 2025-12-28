@@ -1,9 +1,4 @@
-import { RefreshCw, Play, Download } from 'lucide-react'
-
-interface LoadingProgress {
-  text: string
-  progress: number
-}
+import { RefreshCw, Play } from 'lucide-react'
 
 interface EditorProps {
   value: string
@@ -11,12 +6,9 @@ interface EditorProps {
   onGenerate: () => void
   isGenerating: boolean
   error: string | null
-  loadingProgress: LoadingProgress | null
 }
 
-const Editor = ({ value, onChange, onGenerate, isGenerating, error, loadingProgress }: EditorProps) => {
-  const isDownloading = loadingProgress && loadingProgress.progress < 1
-
+const Editor = ({ value, onChange, onGenerate, isGenerating, error }: EditorProps) => {
   return (
     <div className="flex flex-col h-full bg-slate-900 border-r border-slate-700">
       <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
@@ -39,35 +31,9 @@ const Editor = ({ value, onChange, onGenerate, isGenerating, error, loadingProgr
           ) : (
             <Play className="w-4 h-4 fill-current" />
           )}
-          {isGenerating ? (isDownloading ? 'Loading Model...' : 'Calculating...') : 'Generate Layout'}
+          {isGenerating ? 'Generating...' : 'Generate Layout'}
         </button>
       </div>
-
-      {/* Model Loading Progress */}
-      {loadingProgress && (
-        <div className="px-4 py-3 bg-slate-800 border-b border-slate-700">
-          <div className="flex items-center gap-2 mb-2">
-            <Download className="w-4 h-4 text-emerald-400 animate-pulse" />
-            <span className="text-xs text-slate-300 truncate flex-1">
-              {loadingProgress.text}
-            </span>
-            <span className="text-xs text-emerald-400 font-mono">
-              {Math.round(loadingProgress.progress * 100)}%
-            </span>
-          </div>
-          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 ease-out"
-              style={{ width: `${loadingProgress.progress * 100}%` }}
-            />
-          </div>
-          {loadingProgress.progress < 0.1 && (
-            <p className="text-xs text-slate-500 mt-2">
-              First-time setup: downloading model (~1GB). This is cached for future use.
-            </p>
-          )}
-        </div>
-      )}
       
       <div className="flex-1 relative">
         <textarea
