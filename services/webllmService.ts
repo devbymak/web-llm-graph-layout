@@ -1,4 +1,4 @@
-import { CreateMLCEngine, MLCEngine, InitProgressReport } from "@mlc-ai/web-llm"
+import { CreateMLCEngine, MLCEngine, InitProgressReport, prebuiltAppConfig } from "@mlc-ai/web-llm"
 import { GraphData } from "../types"
 
 const MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
@@ -21,13 +21,33 @@ let isLoading = false
 
 export type ProgressCallback = (progress: InitProgressReport) => void
 
+const getLocalModelUrl = () => {
+  const base = `${window.location.origin}/webllm-models/${MODEL_ID}/resolve/main/`
+  return base
+}
+
+const getAppConfig = () => {
+  const prebuiltModel = prebuiltAppConfig.model_list.find(m => m.model_id === MODEL_ID)
+
+  if (!prebuiltModel) {
+    throw new Error(`[WebLLM] Model not found in prebuiltAppConfig: ${MODEL_ID}`)
+  }
+
+  return {
+    ...prebuiltAppConfig,
+    model_list: [{
+      ...prebuiltModel,
+      model: getLocalModelUrl(),
+    }],
+  }
+}
+
 export const initializeEngine = async (onProgress?: ProgressCallback): Promise<MLCEngine> => {
   if (engineInstance) {
     return engineInstance
   }
 
   if (isLoading) {
-    // Wait for existing loading to complete
     while (isLoading) {
       await new Promise(resolve => setTimeout(resolve, 100))
     }
@@ -45,6 +65,7 @@ export const initializeEngine = async (onProgress?: ProgressCallback): Promise<M
         onProgress?.(report)
       },
       logLevel: "INFO",
+      appConfig: getAppConfig(),
     })
 
     return engineInstance
@@ -81,7 +102,6 @@ export const generateLayout = async (
       throw new Error("No response from WebLLM")
     }
 
-    // Clean up potential markdown code blocks
     let jsonString = content.trim()
     if (jsonString.startsWith("```json")) {
       jsonString = jsonString.slice(7)
@@ -95,7 +115,6 @@ export const generateLayout = async (
 
     const layoutedData = JSON.parse(jsonString) as GraphData
 
-    // Validate that all nodes have positions
     const validatedData: GraphData = {
       ...layoutedData,
       nodes: layoutedData.nodes.map((node, index) => ({
@@ -119,4 +138,3 @@ export const resetEngine = async (): Promise<void> => {
     await engineInstance.resetChat()
   }
 }
-

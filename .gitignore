@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# WebLLM local model artifacts (large files; keep out of git by default)
+public/webllm-models
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
