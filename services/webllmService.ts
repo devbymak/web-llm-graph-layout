@@ -96,6 +96,8 @@ let isLoading = false
 export type ProgressCallback = (progress: InitProgressReport) => void
 export type StatusCallback = (status: string) => void
 
+const isDev = import.meta.env.DEV
+
 const getLocalModelUrl = () => {
   const base = `${window.location.origin}/webllm-models/${MODEL_ID}/resolve/main/`
   return base
@@ -108,13 +110,19 @@ const getAppConfig = () => {
     throw new Error(`[WebLLM] Model not found in prebuiltAppConfig: ${MODEL_ID}`)
   }
 
-  return {
-    ...prebuiltAppConfig,
-    model_list: [{
-      ...prebuiltModel,
-      model: getLocalModelUrl(),
-    }],
+  if (isDev) {
+    console.log("[WebLLM] Dev mode: loading model from local files")
+    return {
+      ...prebuiltAppConfig,
+      model_list: [{
+        ...prebuiltModel,
+        model: getLocalModelUrl(),
+      }],
+    }
   }
+
+  console.log("[WebLLM] Production mode: loading model from CDN")
+  return prebuiltAppConfig
 }
 
 export const initializeEngine = async (onProgress?: ProgressCallback): Promise<MLCEngine> => {
