@@ -219,10 +219,6 @@ const Editor = ({
           )}
         </div>
       </div>
-
-      <div className="p-2 bg-slate-800 text-xs text-slate-400 border-t border-slate-700">
-        Tip: Edit the JSON structure above to change nodes and edges, then click Generate.
-      </div>
     </div>
   )
 }
